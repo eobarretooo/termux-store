@@ -4,8 +4,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-
-import requests
+from urllib.request import urlopen
 
 
 DB_BASE_URL = "https://raw.githubusercontent.com/eobarretooo/termux-store-db/main"
@@ -14,14 +13,19 @@ DB_PACKAGE_URL = f"{DB_BASE_URL}/packages/{{name}}.json"
 DEFAULT_CACHE_DIR = Path(__file__).resolve().parents[1] / "cache"
 
 
-HttpGet = Callable[..., requests.Response]
+HttpGet = Callable[[str, int], str]
+
+
+def fetch_text(url: str, timeout: int = 10) -> str:
+    with urlopen(url, timeout=timeout) as response:
+        return response.read().decode("utf-8")
 
 
 class DbSync:
     def __init__(
         self,
         cache_dir: Path | str = DEFAULT_CACHE_DIR,
-        http_get: HttpGet = requests.get,
+        http_get: HttpGet = fetch_text,
     ) -> None:
         self.cache_dir = Path(cache_dir)
         self.metadata_dir = self.cache_dir / "metadata"
@@ -31,10 +35,9 @@ class DbSync:
     def fetch_index(self) -> list[dict[str, Any]]:
         cache_path = self.cache_dir / "index.json"
         try:
-            response = self.http_get(DB_INDEX_URL, timeout=10)
-            response.raise_for_status()
-            cache_path.write_text(response.text, encoding="utf-8")
-            data = response.json()
+            text = self.http_get(DB_INDEX_URL, 10)
+            cache_path.write_text(text, encoding="utf-8")
+            data = json.loads(text)
             return data if isinstance(data, list) else []
         except Exception:
             return self._read_json(cache_path, fallback=[])
@@ -42,10 +45,9 @@ class DbSync:
     def fetch_package(self, name: str) -> dict[str, Any]:
         cache_path = self.metadata_dir / f"{name}.json"
         try:
-            response = self.http_get(DB_PACKAGE_URL.format(name=name), timeout=10)
-            response.raise_for_status()
-            cache_path.write_text(response.text, encoding="utf-8")
-            data = response.json()
+            text = self.http_get(DB_PACKAGE_URL.format(name=name), 10)
+            cache_path.write_text(text, encoding="utf-8")
+            data = json.loads(text)
             return data if isinstance(data, dict) else {}
         except Exception:
             return self._read_json(cache_path, fallback={})

@@ -1,2 +1,2 @@
-requests>=2.28
-jsonschema>=4.0
+# Runtime dependencies are installed with Termux pkg.
+# Keep this file for future pure-Python dependencies.
