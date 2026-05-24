@@ -19,8 +19,13 @@ packages easier to discover, install, and understand on Android with Termux X11.
 ```bash
 pkg update && pkg upgrade
 pkg install python git x11-repo
+pkg install pyqt5
 python -m pip install -r requirements.txt
 ```
+
+Do not install PyQt5 with `pip` on Termux. Use `pkg install pyqt5` instead,
+because the pip package tries to compile Qt bindings locally and requires a
+working `qmake`.
 
 ## Run
 

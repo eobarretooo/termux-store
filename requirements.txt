@@ -1,3 +1,2 @@
-PyQt5>=5.15
 requests>=2.28
 jsonschema>=4.0
