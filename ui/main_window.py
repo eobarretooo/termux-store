@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QFrame,
@@ -30,7 +31,9 @@ from ui.search_bar import SearchBar
 from ui.sidebar import Sidebar
 
 
-_THEME_DIR = Path(__file__).resolve().parents[1] / "assets" / "themes"
+_ROOT_DIR = Path(__file__).resolve().parents[1]
+_THEME_DIR = _ROOT_DIR / "assets" / "themes"
+_LOGO_FILE = _ROOT_DIR / "assets" / "store_logo.svg"
 
 _CATEGORY_ICONS: dict[str, str] = {
     "development": "</>",
@@ -55,8 +58,8 @@ class MainWindow(QMainWindow):
         self.active_query = ""
         self._dark = False
 
-        self.setWindowTitle("Termux Store")
-        self.setMinimumSize(980, 680)
+        self.setWindowTitle("Termux Store - Software Manager")
+        self.setMinimumSize(1020, 700)
 
         self._build_ui()
         self._apply_theme()
@@ -86,7 +89,6 @@ class MainWindow(QMainWindow):
 
         self.status = QLabel()
         self.status.setObjectName("statusLabel")
-        self.status.setContentsMargins(18, 5, 18, 8)
         root_layout.addWidget(self.status)
 
     def _build_header(self) -> QWidget:
@@ -94,22 +96,41 @@ class MainWindow(QMainWindow):
         header.setObjectName("headerBar")
 
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(18, 0, 16, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setSpacing(12)
 
-        mark = QLabel("TS")
-        mark.setObjectName("appMark")
-        layout.addWidget(mark)
+        logo_label = QLabel()
+        logo_label.setObjectName("appLogo")
+        logo_label.setFixedSize(36, 36)
+        logo_label.setAlignment(Qt.AlignCenter)
+        if _LOGO_FILE.exists():
+            pixmap = QIcon(str(_LOGO_FILE)).pixmap(36, 36)
+            if not pixmap.isNull():
+                logo_label.setPixmap(pixmap)
+            else:
+                logo_label.setText("TS")
+                logo_label.setObjectName("appMark")
+        else:
+            logo_label.setText("TS")
+            logo_label.setObjectName("appMark")
+        layout.addWidget(logo_label)
 
         title = QLabel("Software Manager")
         title.setObjectName("appTitle")
         layout.addWidget(title)
 
+        layout.addItem(QSpacerItem(24, 0, QSizePolicy.Fixed, QSizePolicy.Minimum))
+
+        self.search_bar = SearchBar()
+        self.search_bar.search_changed.connect(self._set_query)
+        self.search_bar.setFixedWidth(360)
+        layout.addWidget(self.search_bar)
+
         layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         self.theme_btn = QPushButton("Dark")
         self.theme_btn.setObjectName("themeToggleButton")
-        self.theme_btn.setToolTip("Toggle light/dark theme")
+        self.theme_btn.setToolTip("Toggle dark/light theme")
         self.theme_btn.clicked.connect(self._toggle_theme)
         layout.addWidget(self.theme_btn)
 
@@ -125,12 +146,8 @@ class MainWindow(QMainWindow):
         container.setObjectName("contentPanel")
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(12)
-
-        self.search_bar = SearchBar()
-        self.search_bar.search_changed.connect(self._set_query)
-        layout.addWidget(self.search_bar)
+        layout.setContentsMargins(20, 16, 20, 14)
+        layout.setSpacing(14)
 
         self.stack = QStackedWidget()
         self.stack.setObjectName("pageStack")
@@ -157,19 +174,19 @@ class MainWindow(QMainWindow):
         page.setObjectName("homePage")
         layout = QVBoxLayout(page)
         layout.setContentsMargins(2, 2, 10, 2)
-        layout.setSpacing(16)
+        layout.setSpacing(20)
 
         welcome = QFrame()
         welcome.setObjectName("welcomePanel")
         welcome_layout = QVBoxLayout(welcome)
-        welcome_layout.setContentsMargins(20, 16, 20, 16)
+        welcome_layout.setContentsMargins(24, 18, 24, 18)
         welcome_layout.setSpacing(6)
 
         kicker = QLabel("TERMUX SOFTWARE MANAGER")
         kicker.setObjectName("welcomeKicker")
         welcome_layout.addWidget(kicker)
 
-        title = QLabel("Install desktop apps and command-line tools")
+        title = QLabel("Install apps and command-line tools")
         title.setObjectName("welcomeTitle")
         title.setWordWrap(True)
         welcome_layout.addWidget(title)
@@ -177,11 +194,12 @@ class MainWindow(QMainWindow):
         self.welcome_stats = QLabel("Loading package catalog...")
         self.welcome_stats.setObjectName("welcomeStats")
         welcome_layout.addWidget(self.welcome_stats)
+
         layout.addWidget(welcome)
 
         layout.addWidget(self._section_title("Featured"))
         self.featured_grid = PackageGrid()
-        self.featured_grid.setFixedHeight(142)
+        self.featured_grid.setMaximumHeight(250)
         self.featured_grid.package_selected.connect(self._show_detail)
         layout.addWidget(self.featured_grid)
 
@@ -216,7 +234,7 @@ class MainWindow(QMainWindow):
 
         copy = QVBoxLayout()
         copy.setContentsMargins(0, 0, 0, 0)
-        copy.setSpacing(3)
+        copy.setSpacing(2)
 
         self.list_title = QLabel()
         self.list_title.setObjectName("listTitle")
@@ -228,6 +246,10 @@ class MainWindow(QMainWindow):
 
         header.addLayout(copy, 1)
         layout.addLayout(header)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        layout.addWidget(sep)
 
         self.empty_state = QLabel("No packages found.")
         self.empty_state.setObjectName("emptyState")
@@ -289,21 +311,22 @@ class MainWindow(QMainWindow):
                 widget.deleteLater()
 
         categories = [
-            (category_id, label)
-            for category_id, label in CATEGORIES
-            if category_id not in {"all", "installed"}
+            (cat_id, label)
+            for cat_id, label in CATEGORIES
+            if cat_id not in {"all", "installed"}
         ]
 
-        for index, (category_id, label) in enumerate(categories):
-            count = len(self.store.category_packages(category_id))
+        cols = 3
+        for index, (cat_id, label) in enumerate(categories):
+            count = len(self.store.category_packages(cat_id))
             tile = CategoryTile(
-                category_id,
+                cat_id,
                 label,
                 count,
-                _CATEGORY_ICONS.get(category_id, label[:2].upper()),
+                _CATEGORY_ICONS.get(cat_id, label[:2].upper()),
             )
             tile.selected.connect(self._set_category)
-            self.category_grid.addWidget(tile, index // 3, index % 3)
+            self.category_grid.addWidget(tile, index // cols, index % cols)
 
     def _set_category(self, category: str) -> None:
         self.active_category = category
@@ -327,8 +350,7 @@ class MainWindow(QMainWindow):
         if self.active_query:
             filtered = self.store.search(self.active_query, filtered)
 
-        title = self._list_title(len(filtered))
-        self.list_title.setText(title)
+        self.list_title.setText(self._list_title(len(filtered)))
         self.list_subtitle.setText(self._list_subtitle(len(filtered)))
         self.grid.set_packages(filtered)
         self.grid.setVisible(bool(filtered))
@@ -363,7 +385,7 @@ class MainWindow(QMainWindow):
 
         self.detail_page.set_package(package)
         self.stack.setCurrentWidget(self.detail_page)
-        self.status.setText(f"{package.name} details")
+        self.status.setText(f"Viewing: {package.name}")
 
     def _return_from_detail(self) -> None:
         if self.active_category == "all" and not self.active_query:

@@ -12,18 +12,18 @@ from core.package import Package
 
 
 ICON_COLORS = [
-    "#5aa469",
-    "#6aa6d9",
-    "#c08f4f",
-    "#9b8fd3",
-    "#d07468",
-    "#6cb6a9",
-    "#b98f55",
-    "#7aa65a",
+    "#5c9e44",
+    "#5b8fc4",
+    "#c07830",
+    "#8e6dc4",
+    "#c45050",
+    "#3a9e8a",
+    "#b87c30",
+    "#6aaa3a",
 ]
 
-CARD_WIDTH = 292
-CARD_HEIGHT = 112
+CARD_WIDTH = 0
+CARD_HEIGHT = 74
 
 
 def icon_color(name: str) -> str:
@@ -32,7 +32,7 @@ def icon_color(name: str) -> str:
 
 
 class PackageCard(QFrame):
-    """Mint-style package tile: compact, clickable, no inline actions."""
+    """Mint-style list-row package tile."""
 
     activated = pyqtSignal(object)
 
@@ -41,60 +41,57 @@ class PackageCard(QFrame):
         self.package = package
         self.setObjectName("packageCard")
         self.setFrameShape(QFrame.NoFrame)
-        self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
+        self.setFixedHeight(CARD_HEIGHT)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setCursor(Qt.PointingHandCursor)
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(10, 8, 10, 8)
-        outer.setSpacing(6)
+        root = QHBoxLayout(self)
+        root.setContentsMargins(12, 10, 14, 10)
+        root.setSpacing(12)
+        root.addWidget(self._build_icon(package), 0, Qt.AlignVCenter)
 
-        top = QHBoxLayout()
-        top.setSpacing(9)
-        top.addWidget(self._build_icon(package), 0, Qt.AlignTop)
-
-        copy = QVBoxLayout()
-        copy.setContentsMargins(0, 0, 0, 0)
-        copy.setSpacing(4)
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 0, 0, 0)
+        text_col.setSpacing(3)
 
         title = QLabel(package.name)
         title.setObjectName("packageTitle")
         title.setWordWrap(False)
-        copy.addWidget(title)
+        text_col.addWidget(title)
 
         summary = QLabel(package.description or package.short_fallback)
         summary.setObjectName("packageSummary")
         summary.setWordWrap(False)
         summary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        copy.addWidget(summary)
+        text_col.addWidget(summary)
 
-        top.addLayout(copy, 1)
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta_row.setSpacing(5)
+        meta_row.addWidget(self._meta(category_label(package.category)))
+        meta_row.addWidget(self._dot())
 
-        installed = QLabel("OK")
-        installed.setObjectName("installedMark")
-        installed.setAlignment(Qt.AlignCenter)
-        installed.setFixedSize(24, 24)
-        installed.setVisible(package.installed)
-        top.addWidget(installed, 0, Qt.AlignTop)
-
-        outer.addLayout(top, 1)
-
-        bottom = QHBoxLayout()
-        bottom.setContentsMargins(0, 0, 0, 0)
-        bottom.setSpacing(5)
-
-        bottom.addWidget(self._meta("Termux"))
-        bottom.addWidget(self._dot())
-        bottom.addWidget(self._meta(category_label(package.category)))
+        source = QLabel("Termux")
+        source.setObjectName("sourceBadge")
+        meta_row.addWidget(source)
 
         if package.gui:
-            bottom.addWidget(self._dot())
-            bottom.addWidget(self._meta("GUI"))
+            meta_row.addWidget(self._dot())
+            meta_row.addWidget(self._meta("GUI"))
         if package.x11_required:
-            bottom.addWidget(self._dot())
-            bottom.addWidget(self._meta("X11"))
+            meta_row.addWidget(self._dot())
+            meta_row.addWidget(self._meta("X11"))
 
-        bottom.addStretch(1)
-        outer.addLayout(bottom)
+        meta_row.addStretch(1)
+        text_col.addLayout(meta_row)
+        root.addLayout(text_col, 1)
+
+        if package.installed:
+            check = QLabel("OK")
+            check.setObjectName("installedMark")
+            check.setAlignment(Qt.AlignCenter)
+            check.setFixedSize(28, 24)
+            root.addWidget(check, 0, Qt.AlignVCenter)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
@@ -128,11 +125,12 @@ class PackageCard(QFrame):
                 label.setPixmap(pixmap)
                 return label
 
-        label.setText((package.name[0] if package.name else "?").upper())
+        letter = (package.name[0] if package.name else "?").upper()
+        label.setText(letter)
         label.setStyleSheet(
             f"background: {icon_color(package.name)};"
-            "border-radius: 8px;"
-            "font-size: 21px;"
+            "border-radius: 10px;"
+            "font-size: 20px;"
             "font-weight: 700;"
             "color: white;"
         )

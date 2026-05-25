@@ -13,21 +13,21 @@ class CategoryTile(QFrame):
         self.category_id = category_id
         self.setObjectName("categoryTile")
         self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(74)
+        self.setMinimumHeight(80)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(12)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(14)
 
         icon_label = QLabel(icon)
         icon_label.setObjectName("categoryTileIcon")
         icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setFixedSize(38, 38)
+        icon_label.setFixedSize(42, 42)
         layout.addWidget(icon_label)
 
         copy = QVBoxLayout()
         copy.setContentsMargins(0, 0, 0, 0)
-        copy.setSpacing(3)
+        copy.setSpacing(4)
 
         title = QLabel(label)
         title.setObjectName("categoryTileTitle")
@@ -39,6 +39,11 @@ class CategoryTile(QFrame):
         copy.addWidget(subtitle)
 
         layout.addLayout(copy, 1)
+
+        arrow = QLabel(">")
+        arrow.setObjectName("packageMeta")
+        arrow.setStyleSheet("font-size: 18px;")
+        layout.addWidget(arrow, 0, Qt.AlignVCenter)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:

@@ -5,14 +5,14 @@ from PyQt5.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 
 class SearchBar(QWidget):
-    """Search bar styled as a single app-store search pill."""
+    """Search bar styled as a Mint-like toolbar field."""
 
     search_changed = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
         self.setObjectName("searchContainer")
-        self.setFixedHeight(46)
+        self.setFixedHeight(40)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 12, 0)

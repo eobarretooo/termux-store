@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -29,8 +30,19 @@ class PackageDetailPage(QWidget):
         self.package: Package | None = None
         self.setObjectName("detailPage")
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setObjectName("homeScroll")
+
+        page = QWidget()
+        page.setObjectName("detailPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 16)
         layout.setSpacing(14)
 
         nav = QHBoxLayout()
@@ -47,11 +59,11 @@ class PackageDetailPage(QWidget):
         card = QFrame()
         card.setObjectName("detailCard")
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(22, 20, 22, 22)
+        card_layout.setContentsMargins(24, 22, 24, 22)
         card_layout.setSpacing(16)
 
         header = QHBoxLayout()
-        header.setSpacing(18)
+        header.setSpacing(20)
 
         self.icon = QLabel()
         self.icon.setObjectName("detailIcon")
@@ -61,7 +73,7 @@ class PackageDetailPage(QWidget):
 
         copy = QVBoxLayout()
         copy.setContentsMargins(0, 0, 0, 0)
-        copy.setSpacing(7)
+        copy.setSpacing(6)
 
         self.title = QLabel()
         self.title.setObjectName("detailTitle")
@@ -72,38 +84,57 @@ class PackageDetailPage(QWidget):
         self.summary.setWordWrap(True)
         copy.addWidget(self.summary)
 
-        self.meta = QLabel()
-        self.meta.setObjectName("detailMeta")
-        self.meta.setWordWrap(True)
-        copy.addWidget(self.meta)
+        self._badge_row = QHBoxLayout()
+        self._badge_row.setContentsMargins(0, 4, 0, 0)
+        self._badge_row.setSpacing(6)
+        copy.addLayout(self._badge_row)
 
         copy.addStretch(1)
         header.addLayout(copy, 1)
 
+        button_column = QVBoxLayout()
+        button_column.setSpacing(8)
+
         self.action_button = QPushButton()
         self.action_button.clicked.connect(self._emit_action)
-        header.addWidget(self.action_button, 0, Qt.AlignTop)
-        card_layout.addLayout(header)
-
-        self.description = QTextEdit()
-        self.description.setObjectName("detailDescription")
-        self.description.setReadOnly(True)
-        card_layout.addWidget(self.description, 1)
+        button_column.addWidget(self.action_button)
 
         self.rating_button = QPushButton("Rate compatibility")
         self.rating_button.setObjectName("secondaryButton")
         self.rating_button.clicked.connect(lambda: show_rating_placeholder(self))
-        card_layout.addWidget(self.rating_button, 0, Qt.AlignLeft)
+        button_column.addWidget(self.rating_button)
+        button_column.addStretch(1)
+
+        header.addLayout(button_column, 0)
+        card_layout.addLayout(header)
+
+        sep = QFrame()
+        sep.setObjectName("detailSeparator")
+        sep.setFrameShape(QFrame.HLine)
+        card_layout.addWidget(sep)
+
+        desc_label = QLabel("Description")
+        desc_label.setObjectName("sectionTitle")
+        desc_label.setStyleSheet("font-size: 14px; font-weight: 700;")
+        card_layout.addWidget(desc_label)
+
+        self.description = QTextEdit()
+        self.description.setObjectName("detailDescription")
+        self.description.setReadOnly(True)
+        self.description.setMinimumHeight(140)
+        card_layout.addWidget(self.description, 1)
 
         layout.addWidget(card, 1)
+        scroll.setWidget(page)
+        outer.addWidget(scroll, 1)
 
     def set_package(self, package: Package) -> None:
         self.package = package
         self.title.setText(package.name)
         self.summary.setText(package.description or package.short_fallback)
-        self.meta.setText(self._meta_text(package))
         self.description.setPlainText(package.display_description)
         self._set_icon(package)
+        self._refresh_badges(package)
         self._refresh_action_button(package)
 
     def _emit_action(self) -> None:
@@ -120,14 +151,39 @@ class PackageDetailPage(QWidget):
                 self.icon.setPixmap(pixmap)
                 return
 
-        self.icon.setText((package.name[0] if package.name else "?").upper())
+        letter = (package.name[0] if package.name else "?").upper()
+        self.icon.setText(letter)
         self.icon.setStyleSheet(
             f"background: {icon_color(package.name)};"
-            "border-radius: 16px;"
-            "font-size: 42px;"
+            "border-radius: 18px;"
+            "font-size: 40px;"
             "font-weight: 700;"
             "color: white;"
         )
+
+    def _refresh_badges(self, package: Package) -> None:
+        while self._badge_row.count():
+            item = self._badge_row.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        badges: list[str] = [category_label(package.category)]
+        if package.version:
+            badges.append(package.version)
+        if package.installed:
+            badges.append("Installed")
+        if package.gui:
+            badges.append("GUI")
+        if package.x11_required:
+            badges.append("X11")
+
+        for text in badges:
+            pill = QLabel(text)
+            pill.setObjectName("metaBadge")
+            self._badge_row.addWidget(pill)
+
+        self._badge_row.addStretch(1)
 
     def _refresh_action_button(self, package: Package) -> None:
         if package.installed:
@@ -138,16 +194,3 @@ class PackageDetailPage(QWidget):
             self.action_button.setObjectName("installButton")
         self.action_button.style().unpolish(self.action_button)
         self.action_button.style().polish(self.action_button)
-
-    @staticmethod
-    def _meta_text(package: Package) -> str:
-        flags = [
-            f"Category: {category_label(package.category)}",
-            f"Version: {package.version or 'unknown'}",
-            f"Installed: {'yes' if package.installed else 'no'}",
-        ]
-        if package.gui:
-            flags.append("GUI")
-        if package.x11_required:
-            flags.append("X11 required")
-        return " / ".join(flags)

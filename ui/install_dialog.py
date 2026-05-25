@@ -41,6 +41,7 @@ class InstallDialog(QDialog):
         self.process.readyReadStandardOutput.connect(self._read_stdout)
         self.process.readyReadStandardError.connect(self._read_stderr)
         self.process.finished.connect(self._finished)
+        self.process.errorOccurred.connect(self._error_occurred)
 
         QTimer.singleShot(0, self._start)
 
@@ -58,6 +59,22 @@ class InstallDialog(QDialog):
         self.success = exit_code == 0 and exit_status == QProcess.NormalExit
         status = "finished" if self.success else f"failed with exit code {exit_code}"
         self._append(f"\n{self.action} {status}.\n")
+        self.buttons.button(QDialogButtonBox.Close).setEnabled(True)
+
+    def _error_occurred(self, error: QProcess.ProcessError) -> None:
+        error_msg = {
+            QProcess.FailedToStart: (
+                "The process failed to start. The command was not found or "
+                "permissions were denied. If you are outside Termux, this is "
+                "expected because 'pkg' is Termux-only."
+            ),
+            QProcess.Crashed: "The process crashed.",
+            QProcess.Timedout: "The process timed out.",
+            QProcess.WriteError: "A write error occurred.",
+            QProcess.ReadError: "A read error occurred.",
+            QProcess.UnknownError: "An unknown error occurred.",
+        }.get(error, "An error occurred with the process.")
+        self._append(f"\n[Error] {error_msg}\n")
         self.buttons.button(QDialogButtonBox.Close).setEnabled(True)
 
     def _append(self, text: str) -> None:
