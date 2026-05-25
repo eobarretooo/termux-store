@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
@@ -7,48 +9,108 @@ from PyQt5.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QPushButton,
+    QSizePolicy,
     QVBoxLayout,
-    QWidget,
 )
 
 from core.categories import category_label
 from core.package import Package
 
 
+_ICON_COLORS = [
+    "#3584e4",
+    "#33d17a",
+    "#ff7800",
+    "#9141ac",
+    "#e5a50a",
+    "#2190a4",
+    "#c64600",
+    "#ed333b",
+    "#26a269",
+    "#613583",
+]
+
+_CARD_HEIGHT = 96
+
+
+def _icon_color(name: str) -> str:
+    digest = hashlib.sha256(name.encode("utf-8")).digest()
+    return _ICON_COLORS[digest[0] % len(_ICON_COLORS)]
+
+
 class PackageCard(QFrame):
+    action_requested = pyqtSignal(object)
+
     def __init__(self, package: Package) -> None:
         super().__init__()
+        self.package = package
         self.setObjectName("packageCard")
         self.setFrameShape(QFrame.NoFrame)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(7)
+        outer = QHBoxLayout(self)
+        outer.setContentsMargins(14, 12, 14, 12)
+        outer.setSpacing(14)
 
-        header = QHBoxLayout()
-        header.setSpacing(8)
+        icon_letter = (package.name[0] if package.name else "?").upper()
+        icon = QLabel(icon_letter)
+        icon.setObjectName("pkgIconLabel")
+        icon.setFixedSize(54, 54)
+        icon.setAlignment(Qt.AlignCenter)
+        icon.setStyleSheet(
+            f"background: {_icon_color(package.name)};"
+            "border-radius: 12px;"
+            "font-size: 22px;"
+            "font-weight: 800;"
+            "color: rgba(255,255,255,0.95);"
+        )
+        outer.addWidget(icon, 0, Qt.AlignVCenter)
+
+        info = QVBoxLayout()
+        info.setContentsMargins(0, 0, 0, 0)
+        info.setSpacing(3)
+
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
 
         title = QLabel(package.name)
         title.setObjectName("packageTitle")
-        header.addWidget(title, 1)
+        title_row.addWidget(title, 0)
 
         if package.installed:
-            header.addWidget(self._pill("Installed", "installedPill"))
+            title_row.addWidget(self._pill("Installed", "installedPill"))
         if package.gui:
-            header.addWidget(self._pill("GUI", "featurePill"))
+            title_row.addWidget(self._pill("GUI", "featurePill"))
         if package.x11_required:
-            header.addWidget(self._pill("X11", "featurePill"))
+            title_row.addWidget(self._pill("X11", "featurePill"))
 
-        layout.addLayout(header)
+        title_row.addStretch(1)
+        info.addLayout(title_row)
 
-        meta = QLabel(f"{category_label(package.category)}  |  {package.version or 'unknown version'}")
+        category = category_label(package.category)
+        version = package.version or "unknown version"
+        meta = QLabel(f"{category} / {version}")
         meta.setObjectName("packageMeta")
-        layout.addWidget(meta)
+        info.addWidget(meta)
 
-        description = QLabel(package.description or "No community description yet.")
+        description = QLabel(package.description or "No description available.")
         description.setObjectName("packageDescription")
-        description.setWordWrap(True)
-        layout.addWidget(description)
+        description.setMaximumHeight(20)
+        description.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        info.addWidget(description)
+
+        outer.addLayout(info, 1)
+
+        if package.installed:
+            action = QPushButton("Remove")
+            action.setObjectName("removeButton")
+        else:
+            action = QPushButton("Install")
+            action.setObjectName("installButton")
+
+        action.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        action.clicked.connect(lambda _checked=False: self.action_requested.emit(self.package))
+        outer.addWidget(action, 0, Qt.AlignVCenter)
 
     @staticmethod
     def _pill(text: str, object_name: str) -> QLabel:
@@ -60,66 +122,15 @@ class PackageCard(QFrame):
 
 class PackageGrid(QListWidget):
     package_selected = pyqtSignal(object)
+    package_action_requested = pyqtSignal(object)
 
     def __init__(self) -> None:
         super().__init__()
         self._packages: list[Package] = []
         self.setAlternatingRowColors(False)
-        self.setSpacing(10)
+        self.setSpacing(6)
         self.setUniformItemSizes(False)
-        self.setStyleSheet(
-            """
-            QListWidget {
-                background: #101417;
-                border: 0;
-                padding: 8px;
-            }
-            QListWidget::item {
-                background: transparent;
-                border: 0;
-                margin: 0;
-                padding: 0;
-            }
-            QListWidget::item:selected {
-                background: transparent;
-            }
-            QFrame#packageCard {
-                background: #182126;
-                border: 1px solid #2d3a40;
-                border-left: 4px solid #e8a93a;
-                border-radius: 12px;
-            }
-            QLabel#packageTitle {
-                color: #f7efe2;
-                font-size: 17px;
-                font-weight: 700;
-            }
-            QLabel#packageMeta {
-                color: #b8c2c8;
-                font-size: 12px;
-            }
-            QLabel#packageDescription {
-                color: #e0e4e6;
-                font-size: 13px;
-            }
-            QLabel#installedPill {
-                background: #1f6f50;
-                color: #effff7;
-                border-radius: 9px;
-                padding: 3px 8px;
-                font-size: 11px;
-                font-weight: 700;
-            }
-            QLabel#featurePill {
-                background: #2a3d52;
-                color: #dbeeff;
-                border-radius: 9px;
-                padding: 3px 8px;
-                font-size: 11px;
-                font-weight: 700;
-            }
-            """
-        )
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemDoubleClicked.connect(self._emit_package)
 
     def set_packages(self, packages: list[Package]) -> None:
@@ -128,8 +139,9 @@ class PackageGrid(QListWidget):
 
         for package in packages:
             card = PackageCard(package)
+            card.action_requested.connect(self.package_action_requested.emit)
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, 96))
+            item.setSizeHint(QSize(0, _CARD_HEIGHT))
             item.setData(Qt.UserRole, package)
             self.addItem(item)
             self.setItemWidget(item, card)
