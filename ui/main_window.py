@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from core.categories import infer_category
 from core.db_sync import DbSync
 from core.package import Package
 from core.pkg_manager import PkgManager
@@ -29,6 +30,30 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Termux Store")
         self.setMinimumSize(900, 600)
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background: #101417;
+            }
+            QWidget#contentPanel {
+                background: #101417;
+            }
+            QLabel {
+                color: #d8e0e4;
+            }
+            QPushButton#refreshButton {
+                background: #e8a93a;
+                color: #15110a;
+                border: 0;
+                border-radius: 10px;
+                padding: 10px 14px;
+                font-weight: 700;
+            }
+            QPushButton#refreshButton:hover {
+                background: #f2bc58;
+            }
+            """
+        )
         self._build_ui()
         self._load_packages()
 
@@ -55,6 +80,7 @@ class MainWindow(QMainWindow):
         main.addWidget(self.search_bar)
 
         refresh = QPushButton("Refresh")
+        refresh.setObjectName("refreshButton")
         refresh.clicked.connect(self._load_packages)
         main.addWidget(refresh)
 
@@ -63,6 +89,7 @@ class MainWindow(QMainWindow):
         main.addWidget(self.grid, 1)
 
         container = QWidget()
+        container.setObjectName("contentPanel")
         container.setLayout(main)
         root.addWidget(container, 1)
 
@@ -74,6 +101,8 @@ class MainWindow(QMainWindow):
         for package in packages:
             if package.name in metadata:
                 package.apply_metadata(metadata[package.name])
+            else:
+                package.category = infer_category(package.name)
 
         self.packages = packages
         self.status.setText(self._status_text())
