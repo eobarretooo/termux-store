@@ -28,7 +28,8 @@ class PackageGrid(QListWidget):
                 flags.append("X11")
 
             suffix = f" ({', '.join(flags)})" if flags else ""
-            item = QListWidgetItem(f"{package.name}{suffix}\n{package.description}")
+            details = package.description or f"Version: {package.version or 'unknown'}"
+            item = QListWidgetItem(f"{package.name}{suffix}\n{details}")
             item.setData(Qt.UserRole, package)
             self.addItem(item)
 

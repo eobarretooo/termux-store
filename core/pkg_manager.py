@@ -8,6 +8,8 @@ from core.package import Package
 
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
+ARCHITECTURES = {"aarch64", "arm", "i686", "x86_64", "all"}
+APT_NOISE_LINES = {"Listing...", "Sorting...", "Full Text Search..."}
 
 
 class PkgManager:
@@ -74,6 +76,9 @@ class PkgManager:
             return None
 
         raw_name = parts[0]
+        if raw_name in APT_NOISE_LINES or "/" not in raw_name:
+            return None
+
         name = raw_name.split("/", 1)[0]
         if not name:
             return None
@@ -81,7 +86,9 @@ class PkgManager:
         version = parts[1] if len(parts) > 1 else ""
         installed = "[installed" in line or "[installed," in line
         description_parts = [
-            part for part in parts[2:] if not part.startswith("[installed")
+            part
+            for part in parts[2:]
+            if part not in ARCHITECTURES and not part.startswith("[installed")
         ]
         description = " ".join(description_parts)
 
