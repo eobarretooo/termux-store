@@ -2,7 +2,8 @@ import re
 
 
 CATEGORIES = [
-    ("all", "All"),
+    ("all", "Home"),
+    ("installed", "Installed"),
     ("development", "Development"),
     ("terminal", "Terminal"),
     ("multimedia", "Multimedia"),

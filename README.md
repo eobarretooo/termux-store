@@ -6,6 +6,11 @@ package backend and a local curated catalog in `data/curated_packages.md`.
 The goal is not to replace Termux repositories. The goal is to make native
 packages easier to discover, install, and understand on Android with Termux X11.
 
+The internal flow follows the same broad architecture used by Linux Mint's
+Software Manager: a catalog layer builds package categories and installed state,
+then the UI renders category views, search results, cards, and detail dialogs.
+The implementation is rewritten for PyQt5 and Termux `pkg`.
+
 ## Requirements
 
 - Termux from F-Droid
@@ -47,6 +52,7 @@ termux-store/
   core/
     package.py
     pkg_manager.py
+    store.py
     db_sync.py
     icon_resolver.py
     categories.py

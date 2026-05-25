@@ -15,10 +15,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from core.categories import infer_category
-from core.db_sync import DbSync
 from core.package import Package
-from core.pkg_manager import PkgManager
+from core.store import TermuxStore
 from ui.install_dialog import run_pkg_command
 from ui.package_detail import PackageDetailDialog
 from ui.package_grid import PackageGrid
@@ -32,9 +30,7 @@ _THEME_DIR = Path(__file__).resolve().parents[1] / "assets" / "themes"
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.pkg_manager = PkgManager()
-        self.db_sync = DbSync()
-        self.packages: list[Package] = []
+        self.store = TermuxStore()
         self.active_category = "all"
         self.active_query = ""
         self._dark = False
@@ -173,20 +169,7 @@ class MainWindow(QMainWindow):
 
     def _load_packages(self) -> None:
         self.status.setText("Loading packages...")
-        pkg_map = {package.name: package for package in self.pkg_manager.list_all()}
-        packages = self.db_sync.curated_packages()
-
-        for package in packages:
-            pkg_info = pkg_map.get(package.name)
-            if pkg_info is not None:
-                package.version = pkg_info.version
-                package.installed = pkg_info.installed
-                if not package.description:
-                    package.description = pkg_info.description
-            elif not package.category:
-                package.category = infer_category(package.name)
-
-        self.packages = packages
+        self.store.refresh()
         self._apply_filters()
         self.status.setText(self._status_text())
 
@@ -199,48 +182,39 @@ class MainWindow(QMainWindow):
         self._apply_filters()
 
     def _apply_filters(self) -> None:
-        filtered = self.packages
-
-        if self.active_category != "all":
-            filtered = [p for p in filtered if p.category == self.active_category]
-
+        filtered = self.store.category_packages(self.active_category)
         if self.active_query:
-            filtered = [
-                p
-                for p in filtered
-                if self.active_query in p.name.lower()
-                or self.active_query in p.description.lower()
-            ]
+            filtered = self.store.search(self.active_query, filtered)
 
         self.grid.set_packages(filtered)
-        self.status.setText(f"{len(filtered)} shown / {len(self.packages)} total")
+        self.status.setText(self.store.stats(len(filtered)))
         if hasattr(self, "hero_metric"):
-            self.hero_metric.setText(
-                f"{len(self.packages)} native packages indexed / {len(filtered)} shown"
-            )
+            self.hero_metric.setText(self.store.stats(len(filtered)))
 
     def _open_detail(self, package: Package) -> None:
-        details = self.db_sync.fetch_package(package.name)
+        details = self.store.db_sync.fetch_package(package.name)
         if details:
             package.apply_metadata(details)
 
-        dialog = PackageDetailDialog(package, self.pkg_manager, self)
+        dialog = PackageDetailDialog(package, self.store.pkg_manager, self)
         dialog.exec_()
+        self.store.set_installed(package.name, package.installed)
+        self._apply_filters()
 
     def _run_package_action(self, package: Package) -> None:
         if package.installed:
-            command = [self.pkg_manager.pkg_executable, "uninstall", "-y", package.name]
+            command = [self.store.pkg_manager.pkg_executable, "uninstall", "-y", package.name]
             action = "Remove"
         else:
-            command = [self.pkg_manager.pkg_executable, "install", "-y", package.name]
+            command = [self.store.pkg_manager.pkg_executable, "install", "-y", package.name]
             action = "Install"
 
         success = run_pkg_command(self, action, command)
         if success:
-            package.installed = not package.installed
+            self.store.set_installed(package.name, not package.installed)
         self._apply_filters()
 
     def _status_text(self) -> str:
-        if not self.pkg_manager.available():
+        if not self.store.pkg_manager.available():
             return "pkg not found - run inside Termux for package operations"
-        return f"{len(self.packages)} packages loaded"
+        return self.store.stats()

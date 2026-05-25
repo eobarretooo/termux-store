@@ -8,6 +8,7 @@ from core.categories import CATEGORIES
 
 _ICONS: dict[str, str] = {
     "all": "*  ",
+    "installed": "OK ",
     "development": "/  ",
     "terminal": ">  ",
     "multimedia": "~  ",
