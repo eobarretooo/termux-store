@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PyQt5.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -18,9 +19,9 @@ from core.categories import infer_category
 from core.db_sync import DbSync
 from core.package import Package
 from core.pkg_manager import PkgManager
+from ui.install_dialog import show_command_result
 from ui.package_detail import PackageDetailDialog
 from ui.package_grid import PackageGrid
-from ui.install_dialog import show_command_result
 from ui.search_bar import SearchBar
 from ui.sidebar import Sidebar
 
@@ -36,10 +37,10 @@ class MainWindow(QMainWindow):
         self.packages: list[Package] = []
         self.active_category = "all"
         self.active_query = ""
-        self._dark = True
+        self._dark = False
 
         self.setWindowTitle("Termux Store")
-        self.setMinimumSize(960, 640)
+        self.setMinimumSize(980, 680)
 
         self._build_ui()
         self._apply_theme()
@@ -69,7 +70,7 @@ class MainWindow(QMainWindow):
 
         self.status = QLabel()
         self.status.setObjectName("statusLabel")
-        self.status.setContentsMargins(16, 4, 16, 8)
+        self.status.setContentsMargins(22, 6, 22, 10)
         root_layout.addWidget(self.status)
 
     def _build_header(self) -> QWidget:
@@ -77,8 +78,12 @@ class MainWindow(QMainWindow):
         header.setObjectName("headerBar")
 
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(16, 0, 12, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(22, 0, 18, 0)
+        layout.setSpacing(12)
+
+        mark = QLabel("TS")
+        mark.setObjectName("appMark")
+        layout.addWidget(mark)
 
         title = QLabel("Termux Store")
         title.setObjectName("appTitle")
@@ -86,7 +91,7 @@ class MainWindow(QMainWindow):
 
         layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self.theme_btn = QPushButton("Light")
+        self.theme_btn = QPushButton("Dark")
         self.theme_btn.setObjectName("themeToggleButton")
         self.theme_btn.setToolTip("Toggle light/dark theme")
         self.theme_btn.clicked.connect(self._toggle_theme)
@@ -104,8 +109,10 @@ class MainWindow(QMainWindow):
         container.setObjectName("contentPanel")
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(16, 14, 16, 10)
-        layout.setSpacing(12)
+        layout.setContentsMargins(22, 18, 22, 14)
+        layout.setSpacing(16)
+
+        layout.addWidget(self._build_hero())
 
         self.search_bar = SearchBar()
         self.search_bar.search_changed.connect(self._set_query)
@@ -117,6 +124,35 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.grid, 1)
 
         return container
+
+    def _build_hero(self) -> QWidget:
+        hero = QFrame()
+        hero.setObjectName("heroPanel")
+
+        layout = QVBoxLayout(hero)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(8)
+
+        kicker = QLabel("TERMUX NATIVE")
+        kicker.setObjectName("heroKicker")
+        layout.addWidget(kicker)
+
+        title = QLabel("The app store for Termux")
+        title.setObjectName("heroTitle")
+        layout.addWidget(title)
+
+        subtitle = QLabel(
+            "Browse packages, discover X11 apps, and install directly through pkg."
+        )
+        subtitle.setObjectName("heroSubtitle")
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
+
+        self.hero_metric = QLabel("Loading package catalog...")
+        self.hero_metric.setObjectName("heroMetric")
+        layout.addWidget(self.hero_metric)
+
+        return hero
 
     def _apply_theme(self) -> None:
         qss_file = _THEME_DIR / ("dark.qss" if self._dark else "light.qss")
@@ -174,6 +210,10 @@ class MainWindow(QMainWindow):
 
         self.grid.set_packages(filtered)
         self.status.setText(f"{len(filtered)} shown / {len(self.packages)} total")
+        if hasattr(self, "hero_metric"):
+            self.hero_metric.setText(
+                f"{len(self.packages)} native packages indexed / {len(filtered)} shown"
+            )
 
     def _open_detail(self, package: Package) -> None:
         details = self.db_sync.fetch_package(package.name)

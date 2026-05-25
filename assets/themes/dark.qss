@@ -1,329 +1,273 @@
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ *
- *  Termux Store — Dark Theme                                     *
- *  Inspired by Flathub / GNOME Software                          *
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Termux Store - Flathub-like dark theme */
 
-/* ── Base ──────────────────────────────────────────────────────── */
 QWidget {
-    background-color: #242424;
-    color: rgba(255, 255, 255, 0.87);
-    font-family: "Cantarell", "Ubuntu", "Noto Sans", sans-serif;
+    background-color: #111827;
+    color: #e5edf5;
+    font-family: "Cantarell", "Noto Sans", "Ubuntu", sans-serif;
     font-size: 14px;
     outline: 0;
 }
 
-QWidget:disabled {
-    color: rgba(255, 255, 255, 0.35);
+QWidget#headerBar {
+    background-color: #0b1220;
+    border-bottom: 1px solid #1f2a3a;
+    min-height: 58px;
+    max-height: 58px;
 }
 
-/* ── Headerbar ─────────────────────────────────────────────────── */
-QWidget#headerBar {
-    background-color: #2d2d2d;
-    border-bottom: 1px solid #1a1a1a;
-    min-height: 52px;
-    max-height: 52px;
+QLabel#appMark {
+    background-color: #3584e4;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 7px 9px;
+    font-size: 13px;
+    font-weight: 900;
 }
 
 QLabel#appTitle {
     color: #ffffff;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
+    font-size: 18px;
+    font-weight: 800;
 }
 
-/* ── Sidebar ───────────────────────────────────────────────────── */
 QWidget#sidebar {
-    background-color: #1e1e1e;
-    border-right: 1px solid #181818;
+    background-color: #0b1220;
+    border-right: 1px solid #1f2a3a;
 }
 
 QLabel#sidebarSection {
-    color: rgba(255, 255, 255, 0.38);
+    color: #8796a8;
     font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.8px;
-    padding: 0 6px 6px 6px;
+    font-weight: 800;
+    letter-spacing: 1.7px;
+    padding: 0 8px 8px 8px;
 }
 
 QWidget#sidebar QPushButton {
     background: transparent;
-    color: rgba(255, 255, 255, 0.72);
+    color: #b7c4d2;
     border: 0;
-    border-radius: 8px;
-    padding: 9px 12px;
+    border-radius: 12px;
+    padding: 10px 12px;
     text-align: left;
     font-size: 14px;
-    font-weight: 400;
+    font-weight: 500;
 }
 
 QWidget#sidebar QPushButton:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: #182337;
     color: #ffffff;
 }
 
-QWidget#sidebar QPushButton:pressed {
-    background: rgba(255, 255, 255, 0.11);
-}
-
 QWidget#sidebar QPushButton[active="true"] {
-    background: rgba(53, 132, 228, 0.22);
+    background: rgba(53, 132, 228, 0.20);
     color: #87b4f0;
-    font-weight: 600;
+    font-weight: 800;
 }
 
-QWidget#sidebar QPushButton[active="true"]:hover {
-    background: rgba(53, 132, 228, 0.30);
-    color: #99c0f3;
-}
-
-/* ── Content ───────────────────────────────────────────────────── */
 QWidget#contentPanel {
-    background-color: #242424;
+    background-color: #111827;
 }
 
-/* ── Search bar ────────────────────────────────────────────────── */
+QFrame#heroPanel {
+    background-color: #172033;
+    border: 1px solid #26344a;
+    border-left: 6px solid #3584e4;
+    border-radius: 22px;
+}
+
+QLabel#heroKicker {
+    color: #87b4f0;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.8px;
+}
+
+QLabel#heroTitle {
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 900;
+}
+
+QLabel#heroSubtitle {
+    color: #b7c4d2;
+    font-size: 15px;
+}
+
+QLabel#heroMetric {
+    color: #57e389;
+    font-size: 13px;
+    font-weight: 800;
+}
+
 QWidget#searchContainer {
-    background-color: #303030;
-    border: 1px solid #404040;
-    border-radius: 10px;
-}
-
-QWidget#searchContainer:focus-within {
-    border-color: #3584e4;
+    background-color: #172033;
+    border: 1px solid #26344a;
+    border-radius: 16px;
 }
 
 QLineEdit#searchBar {
     background: transparent;
     color: #ffffff;
     border: 0;
-    padding: 0 4px;
-    font-size: 14px;
+    padding: 0 8px;
+    font-size: 15px;
     selection-background-color: #3584e4;
 }
 
 QLabel#searchIcon {
-    color: rgba(255, 255, 255, 0.38);
-    font-size: 16px;
-    padding: 0 4px 0 12px;
+    color: #8796a8;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 0 10px 0 14px;
 }
 
-/* ── Package list ──────────────────────────────────────────────── */
 QListWidget {
     background: transparent;
     border: 0;
-    padding: 4px 0;
+    padding: 2px;
 }
 
 QListWidget::item {
     background: transparent;
     border: 0;
-    padding: 0;
     margin: 0;
+    padding: 0;
 }
 
 QListWidget::item:selected {
     background: transparent;
 }
 
-QScrollBar:vertical {
-    background: transparent;
-    width: 8px;
-    margin: 0;
-}
-
-QScrollBar::handle:vertical {
-    background: rgba(255, 255, 255, 0.18);
-    border-radius: 4px;
-    min-height: 32px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background: rgba(255, 255, 255, 0.32);
-}
-
-QScrollBar::add-line:vertical,
-QScrollBar::sub-line:vertical { height: 0; }
-
-QScrollBar::add-page:vertical,
-QScrollBar::sub-page:vertical { background: transparent; }
-
-/* ── Package card ──────────────────────────────────────────────── */
 QFrame#packageCard {
-    background-color: #2e2e2e;
-    border: 1px solid #3a3a3a;
-    border-radius: 12px;
+    background-color: #172033;
+    border: 1px solid #26344a;
+    border-radius: 18px;
 }
 
 QFrame#packageCard:hover {
-    background-color: #333333;
     border-color: #3584e4;
+    background-color: #1b2942;
 }
 
 QLabel#pkgIconLabel {
-    border-radius: 12px;
-    font-size: 20px;
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.95);
-    qproperty-alignment: AlignCenter;
+    border-radius: 16px;
+    font-size: 24px;
+    font-weight: 900;
+    color: white;
 }
 
 QLabel#packageTitle {
     color: #ffffff;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 900;
 }
 
 QLabel#packageMeta {
-    color: rgba(255, 255, 255, 0.45);
+    color: #8796a8;
     font-size: 12px;
 }
 
 QLabel#packageDescription {
-    color: rgba(255, 255, 255, 0.65);
+    color: #b7c4d2;
     font-size: 13px;
 }
 
-/* ── Pills ─────────────────────────────────────────────────────── */
 QLabel#installedPill {
-    background: rgba(51, 209, 122, 0.16);
+    background: rgba(87, 227, 137, 0.16);
     color: #57e389;
-    border-radius: 7px;
-    padding: 2px 9px;
+    border-radius: 8px;
+    padding: 2px 8px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 900;
 }
 
 QLabel#featurePill {
-    background: rgba(53, 132, 228, 0.16);
+    background: rgba(53, 132, 228, 0.18);
     color: #87b4f0;
-    border-radius: 7px;
-    padding: 2px 9px;
+    border-radius: 8px;
+    padding: 2px 8px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 800;
 }
 
-/* ── Card action buttons ───────────────────────────────────────── */
 QPushButton#installButton {
     background: #3584e4;
-    color: #ffffff;
+    color: white;
     border: 0;
-    border-radius: 8px;
-    padding: 7px 16px;
+    border-radius: 11px;
+    padding: 8px 18px;
     font-size: 13px;
-    font-weight: 600;
-    min-width: 84px;
+    font-weight: 900;
+    min-width: 86px;
 }
 
 QPushButton#installButton:hover {
     background: #4490e8;
 }
 
-QPushButton#installButton:pressed {
-    background: #2a72d8;
-}
-
 QPushButton#removeButton {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 8px;
-    padding: 7px 16px;
+    background: transparent;
+    color: #ff9c97;
+    border: 1px solid rgba(255, 156, 151, 0.35);
+    border-radius: 11px;
+    padding: 8px 18px;
     font-size: 13px;
-    font-weight: 600;
-    min-width: 84px;
+    font-weight: 900;
+    min-width: 86px;
 }
 
 QPushButton#removeButton:hover {
     background: rgba(224, 27, 36, 0.14);
-    color: #ff7b7b;
-    border-color: rgba(224, 27, 36, 0.38);
 }
 
-/* ── Header / toolbar buttons ──────────────────────────────────── */
-QPushButton#refreshButton {
-    background: rgba(255, 255, 255, 0.09);
-    color: rgba(255, 255, 255, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-    padding: 7px 16px;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-QPushButton#refreshButton:hover {
-    background: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-}
-
+QPushButton#refreshButton,
 QPushButton#themeToggleButton {
-    background: transparent;
-    color: rgba(255, 255, 255, 0.6);
-    border: 0;
-    border-radius: 8px;
-    padding: 7px 10px;
-    font-size: 17px;
+    background: #172033;
+    color: #d8e3ef;
+    border: 1px solid #26344a;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 800;
 }
 
+QPushButton#refreshButton:hover,
 QPushButton#themeToggleButton:hover {
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(53, 132, 228, 0.20);
     color: #ffffff;
 }
 
-/* ── Status label ──────────────────────────────────────────────── */
 QLabel#statusLabel {
-    color: rgba(255, 255, 255, 0.38);
+    color: #8796a8;
     font-size: 12px;
 }
 
-/* ── Dialog ────────────────────────────────────────────────────── */
+QScrollBar:vertical {
+    background: transparent;
+    width: 9px;
+}
+
+QScrollBar::handle:vertical {
+    background: #35445a;
+    border-radius: 4px;
+    min-height: 34px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
 QDialog {
-    background: #242424;
+    background: #111827;
 }
 
-QTextEdit, QPlainTextEdit {
-    background: #2e2e2e;
-    border: 1px solid #3a3a3a;
-    border-radius: 8px;
-    padding: 8px;
-    color: rgba(255, 255, 255, 0.87);
-    selection-background-color: #3584e4;
-}
-
-QPushButton#dialogPrimaryButton {
-    background: #3584e4;
-    color: #ffffff;
-    border: 0;
-    border-radius: 8px;
-    padding: 9px 22px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-QPushButton#dialogPrimaryButton:hover {
-    background: #4490e8;
-}
-
-QPushButton#dialogSecondaryButton {
-    background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 8px;
-    padding: 9px 22px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-QPushButton#dialogSecondaryButton:hover {
-    background: rgba(255, 255, 255, 0.12);
-}
-
-QLabel#dialogTitle {
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: 700;
-}
-
-QLabel#dialogVersion {
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 13px;
+QTextEdit,
+QPlainTextEdit {
+    background: #172033;
+    border: 1px solid #26344a;
+    border-radius: 12px;
+    padding: 10px;
+    color: #e5edf5;
 }

@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QListView,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -31,7 +32,9 @@ _ICON_COLORS = [
     "#613583",
 ]
 
-_CARD_HEIGHT = 96
+_CARD_WIDTH = 252
+_CARD_HEIGHT = 188
+_GRID_CELL = QSize(274, 210)
 
 
 def _icon_color(name: str) -> str:
@@ -47,59 +50,67 @@ class PackageCard(QFrame):
         self.package = package
         self.setObjectName("packageCard")
         self.setFrameShape(QFrame.NoFrame)
+        self.setFixedSize(_CARD_WIDTH, _CARD_HEIGHT)
 
-        outer = QHBoxLayout(self)
-        outer.setContentsMargins(14, 12, 14, 12)
-        outer.setSpacing(14)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(16, 14, 16, 14)
+        outer.setSpacing(9)
+
+        top = QHBoxLayout()
+        top.setSpacing(10)
 
         icon_letter = (package.name[0] if package.name else "?").upper()
         icon = QLabel(icon_letter)
         icon.setObjectName("pkgIconLabel")
-        icon.setFixedSize(54, 54)
+        icon.setFixedSize(58, 58)
         icon.setAlignment(Qt.AlignCenter)
         icon.setStyleSheet(
             f"background: {_icon_color(package.name)};"
-            "border-radius: 12px;"
-            "font-size: 22px;"
-            "font-weight: 800;"
-            "color: rgba(255,255,255,0.95);"
+            "border-radius: 16px;"
+            "font-size: 24px;"
+            "font-weight: 900;"
+            "color: white;"
         )
-        outer.addWidget(icon, 0, Qt.AlignVCenter)
+        top.addWidget(icon, 0, Qt.AlignTop)
 
-        info = QVBoxLayout()
-        info.setContentsMargins(0, 0, 0, 0)
-        info.setSpacing(3)
-
-        title_row = QHBoxLayout()
-        title_row.setSpacing(8)
+        top_text = QVBoxLayout()
+        top_text.setContentsMargins(0, 0, 0, 0)
+        top_text.setSpacing(4)
 
         title = QLabel(package.name)
         title.setObjectName("packageTitle")
-        title_row.addWidget(title, 0)
-
-        if package.installed:
-            title_row.addWidget(self._pill("Installed", "installedPill"))
-        if package.gui:
-            title_row.addWidget(self._pill("GUI", "featurePill"))
-        if package.x11_required:
-            title_row.addWidget(self._pill("X11", "featurePill"))
-
-        title_row.addStretch(1)
-        info.addLayout(title_row)
+        title.setWordWrap(False)
+        top_text.addWidget(title)
 
         category = category_label(package.category)
         version = package.version or "unknown version"
         meta = QLabel(f"{category} / {version}")
         meta.setObjectName("packageMeta")
-        info.addWidget(meta)
+        top_text.addWidget(meta)
+        top_text.addStretch(1)
+
+        top.addLayout(top_text, 1)
+        outer.addLayout(top)
 
         description = QLabel(package.description or "No description available.")
         description.setObjectName("packageDescription")
-        description.setMaximumHeight(20)
+        description.setWordWrap(True)
+        description.setMaximumHeight(40)
         description.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        info.addWidget(description)
+        outer.addWidget(description)
 
-        outer.addLayout(info, 1)
+        bottom = QHBoxLayout()
+        bottom.setContentsMargins(0, 0, 0, 0)
+        bottom.setSpacing(8)
+
+        if package.installed:
+            bottom.addWidget(self._pill("Installed", "installedPill"))
+        if package.gui:
+            bottom.addWidget(self._pill("GUI", "featurePill"))
+        if package.x11_required:
+            bottom.addWidget(self._pill("X11", "featurePill"))
+
+        bottom.addStretch(1)
 
         if package.installed:
             action = QPushButton("Remove")
@@ -110,7 +121,8 @@ class PackageCard(QFrame):
 
         action.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         action.clicked.connect(lambda _checked=False: self.action_requested.emit(self.package))
-        outer.addWidget(action, 0, Qt.AlignVCenter)
+        bottom.addWidget(action)
+        outer.addLayout(bottom)
 
     @staticmethod
     def _pill(text: str, object_name: str) -> QLabel:
@@ -128,7 +140,12 @@ class PackageGrid(QListWidget):
         super().__init__()
         self._packages: list[Package] = []
         self.setAlternatingRowColors(False)
-        self.setSpacing(6)
+        self.setViewMode(QListView.IconMode)
+        self.setResizeMode(QListView.Adjust)
+        self.setMovement(QListView.Static)
+        self.setWrapping(True)
+        self.setSpacing(12)
+        self.setGridSize(_GRID_CELL)
         self.setUniformItemSizes(False)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.itemDoubleClicked.connect(self._emit_package)
@@ -141,7 +158,7 @@ class PackageGrid(QListWidget):
             card = PackageCard(package)
             card.action_requested.connect(self.package_action_requested.emit)
             item = QListWidgetItem()
-            item.setSizeHint(QSize(0, _CARD_HEIGHT))
+            item.setSizeHint(_GRID_CELL)
             item.setData(Qt.UserRole, package)
             self.addItem(item)
             self.setItemWidget(item, card)
