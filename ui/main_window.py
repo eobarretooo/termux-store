@@ -2,29 +2,49 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpacerItem,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
+from core.categories import CATEGORIES, category_label
 from core.package import Package
 from core.store import TermuxStore
+from ui.category_tile import CategoryTile
 from ui.install_dialog import run_pkg_command
-from ui.package_detail import PackageDetailDialog
+from ui.package_detail_page import PackageDetailPage
 from ui.package_grid import PackageGrid
 from ui.search_bar import SearchBar
 from ui.sidebar import Sidebar
 
 
 _THEME_DIR = Path(__file__).resolve().parents[1] / "assets" / "themes"
+
+_CATEGORY_ICONS: dict[str, str] = {
+    "development": "</>",
+    "terminal": ">_",
+    "multimedia": "AV",
+    "network": "NET",
+    "utilities": "UTL",
+    "security": "SEC",
+    "graphics": "IMG",
+    "productivity": "DOC",
+    "games": "PAD",
+    "desktop": "WM",
+    "fonts": "Aa",
+}
 
 
 class MainWindow(QMainWindow):
@@ -66,7 +86,7 @@ class MainWindow(QMainWindow):
 
         self.status = QLabel()
         self.status.setObjectName("statusLabel")
-        self.status.setContentsMargins(22, 6, 22, 10)
+        self.status.setContentsMargins(18, 5, 18, 8)
         root_layout.addWidget(self.status)
 
     def _build_header(self) -> QWidget:
@@ -74,14 +94,14 @@ class MainWindow(QMainWindow):
         header.setObjectName("headerBar")
 
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(22, 0, 18, 0)
-        layout.setSpacing(12)
+        layout.setContentsMargins(18, 0, 16, 0)
+        layout.setSpacing(10)
 
         mark = QLabel("TS")
         mark.setObjectName("appMark")
         layout.addWidget(mark)
 
-        title = QLabel("Termux Store")
+        title = QLabel("Software Manager")
         title.setObjectName("appTitle")
         layout.addWidget(title)
 
@@ -105,50 +125,127 @@ class MainWindow(QMainWindow):
         container.setObjectName("contentPanel")
 
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(22, 18, 22, 14)
-        layout.setSpacing(16)
-
-        layout.addWidget(self._build_hero())
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(12)
 
         self.search_bar = SearchBar()
         self.search_bar.search_changed.connect(self._set_query)
         layout.addWidget(self.search_bar)
 
-        self.grid = PackageGrid()
-        self.grid.package_selected.connect(self._open_detail)
-        self.grid.package_action_requested.connect(self._run_package_action)
-        layout.addWidget(self.grid, 1)
+        self.stack = QStackedWidget()
+        self.stack.setObjectName("pageStack")
+        self.home_page = self._build_home_page()
+        self.list_page = self._build_list_page()
+        self.detail_page = PackageDetailPage()
+        self.detail_page.back_requested.connect(self._return_from_detail)
+        self.detail_page.action_requested.connect(self._run_package_action)
+
+        self.stack.addWidget(self.home_page)
+        self.stack.addWidget(self.list_page)
+        self.stack.addWidget(self.detail_page)
+        layout.addWidget(self.stack, 1)
 
         return container
 
-    def _build_hero(self) -> QWidget:
-        hero = QFrame()
-        hero.setObjectName("heroPanel")
+    def _build_home_page(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setObjectName("homeScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
 
-        layout = QVBoxLayout(hero)
-        layout.setContentsMargins(24, 20, 24, 20)
-        layout.setSpacing(8)
+        page = QWidget()
+        page.setObjectName("homePage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(2, 2, 10, 2)
+        layout.setSpacing(16)
 
-        kicker = QLabel("TERMUX NATIVE")
-        kicker.setObjectName("heroKicker")
-        layout.addWidget(kicker)
+        welcome = QFrame()
+        welcome.setObjectName("welcomePanel")
+        welcome_layout = QVBoxLayout(welcome)
+        welcome_layout.setContentsMargins(20, 16, 20, 16)
+        welcome_layout.setSpacing(6)
 
-        title = QLabel("The app store for Termux")
-        title.setObjectName("heroTitle")
-        layout.addWidget(title)
+        kicker = QLabel("TERMUX SOFTWARE MANAGER")
+        kicker.setObjectName("welcomeKicker")
+        welcome_layout.addWidget(kicker)
 
-        subtitle = QLabel(
-            "Browse packages, discover X11 apps, and install directly through pkg."
-        )
-        subtitle.setObjectName("heroSubtitle")
-        subtitle.setWordWrap(True)
-        layout.addWidget(subtitle)
+        title = QLabel("Install desktop apps and command-line tools")
+        title.setObjectName("welcomeTitle")
+        title.setWordWrap(True)
+        welcome_layout.addWidget(title)
 
-        self.hero_metric = QLabel("Loading package catalog...")
-        self.hero_metric.setObjectName("heroMetric")
-        layout.addWidget(self.hero_metric)
+        self.welcome_stats = QLabel("Loading package catalog...")
+        self.welcome_stats.setObjectName("welcomeStats")
+        welcome_layout.addWidget(self.welcome_stats)
+        layout.addWidget(welcome)
 
-        return hero
+        layout.addWidget(self._section_title("Featured"))
+        self.featured_grid = PackageGrid()
+        self.featured_grid.setFixedHeight(142)
+        self.featured_grid.package_selected.connect(self._show_detail)
+        layout.addWidget(self.featured_grid)
+
+        layout.addWidget(self._section_title("Categories"))
+        self.category_panel = QFrame()
+        self.category_panel.setObjectName("categoryPanel")
+        self.category_grid = QGridLayout(self.category_panel)
+        self.category_grid.setContentsMargins(0, 0, 0, 0)
+        self.category_grid.setHorizontalSpacing(10)
+        self.category_grid.setVerticalSpacing(10)
+        layout.addWidget(self.category_panel)
+
+        layout.addStretch(1)
+        scroll.setWidget(page)
+        return scroll
+
+    def _build_list_page(self) -> QWidget:
+        page = QWidget()
+        page.setObjectName("listPage")
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+        header.setSpacing(10)
+
+        self.home_button = QPushButton("Home")
+        self.home_button.setObjectName("backButton")
+        self.home_button.clicked.connect(self._show_home)
+        header.addWidget(self.home_button, 0, Qt.AlignTop)
+
+        copy = QVBoxLayout()
+        copy.setContentsMargins(0, 0, 0, 0)
+        copy.setSpacing(3)
+
+        self.list_title = QLabel()
+        self.list_title.setObjectName("listTitle")
+        copy.addWidget(self.list_title)
+
+        self.list_subtitle = QLabel()
+        self.list_subtitle.setObjectName("listSubtitle")
+        copy.addWidget(self.list_subtitle)
+
+        header.addLayout(copy, 1)
+        layout.addLayout(header)
+
+        self.empty_state = QLabel("No packages found.")
+        self.empty_state.setObjectName("emptyState")
+        self.empty_state.setAlignment(Qt.AlignCenter)
+        self.empty_state.setVisible(False)
+        layout.addWidget(self.empty_state)
+
+        self.grid = PackageGrid()
+        self.grid.package_selected.connect(self._show_detail)
+        layout.addWidget(self.grid, 1)
+
+        return page
+
+    @staticmethod
+    def _section_title(text: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("sectionTitle")
+        return label
 
     def _apply_theme(self) -> None:
         qss_file = _THEME_DIR / ("dark.qss" if self._dark else "light.qss")
@@ -170,49 +267,128 @@ class MainWindow(QMainWindow):
     def _load_packages(self) -> None:
         self.status.setText("Loading packages...")
         self.store.refresh()
-        self._apply_filters()
+        self._refresh_home()
+
+        if self.active_category == "all" and not self.active_query:
+            self._show_home()
+        else:
+            self._apply_filters()
+
         self.status.setText(self._status_text())
+
+    def _refresh_home(self) -> None:
+        self.featured_grid.set_packages(self.store.featured_packages())
+        self.welcome_stats.setText(self.store.stats())
+        self._refresh_category_tiles()
+
+    def _refresh_category_tiles(self) -> None:
+        while self.category_grid.count():
+            item = self.category_grid.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        categories = [
+            (category_id, label)
+            for category_id, label in CATEGORIES
+            if category_id not in {"all", "installed"}
+        ]
+
+        for index, (category_id, label) in enumerate(categories):
+            count = len(self.store.category_packages(category_id))
+            tile = CategoryTile(
+                category_id,
+                label,
+                count,
+                _CATEGORY_ICONS.get(category_id, label[:2].upper()),
+            )
+            tile.selected.connect(self._set_category)
+            self.category_grid.addWidget(tile, index // 3, index % 3)
 
     def _set_category(self, category: str) -> None:
         self.active_category = category
+        self.sidebar.set_active(category)
+
+        if category == "all":
+            self._show_home()
+            return
+
         self._apply_filters()
 
     def _set_query(self, query: str) -> None:
         self.active_query = query.strip().lower()
-        self._apply_filters()
+        if self.active_query or self.active_category != "all":
+            self._apply_filters()
+        else:
+            self._show_home()
 
     def _apply_filters(self) -> None:
         filtered = self.store.category_packages(self.active_category)
         if self.active_query:
             filtered = self.store.search(self.active_query, filtered)
 
+        title = self._list_title(len(filtered))
+        self.list_title.setText(title)
+        self.list_subtitle.setText(self._list_subtitle(len(filtered)))
         self.grid.set_packages(filtered)
+        self.grid.setVisible(bool(filtered))
+        self.empty_state.setVisible(not filtered)
+        self.stack.setCurrentWidget(self.list_page)
         self.status.setText(self.store.stats(len(filtered)))
-        if hasattr(self, "hero_metric"):
-            self.hero_metric.setText(self.store.stats(len(filtered)))
 
-    def _open_detail(self, package: Package) -> None:
+    def _list_title(self, count: int) -> str:
+        if self.active_query:
+            return f"Search results for '{self.active_query}'"
+        return category_label(self.active_category)
+
+    def _list_subtitle(self, count: int) -> str:
+        noun = "package" if count == 1 else "packages"
+        if self.active_query and self.active_category != "all":
+            return f"{count} {noun} in {category_label(self.active_category)}"
+        return f"{count} {noun}"
+
+    def _show_home(self) -> None:
+        self.active_category = "all"
+        self.sidebar.set_active("all")
+        if self.search_bar.text():
+            self.active_query = ""
+            self.search_bar.clear()
+        self.stack.setCurrentWidget(self.home_page)
+        self.status.setText(self.store.stats())
+
+    def _show_detail(self, package: Package) -> None:
         details = self.store.db_sync.fetch_package(package.name)
         if details:
             package.apply_metadata(details)
 
-        dialog = PackageDetailDialog(package, self.store.pkg_manager, self)
-        dialog.exec_()
-        self.store.set_installed(package.name, package.installed)
-        self._apply_filters()
+        self.detail_page.set_package(package)
+        self.stack.setCurrentWidget(self.detail_page)
+        self.status.setText(f"{package.name} details")
+
+    def _return_from_detail(self) -> None:
+        if self.active_category == "all" and not self.active_query:
+            self._show_home()
+        else:
+            self._apply_filters()
 
     def _run_package_action(self, package: Package) -> None:
         if package.installed:
             command = [self.store.pkg_manager.pkg_executable, "uninstall", "-y", package.name]
             action = "Remove"
+            target_installed = False
         else:
             command = [self.store.pkg_manager.pkg_executable, "install", "-y", package.name]
             action = "Install"
+            target_installed = True
 
         success = run_pkg_command(self, action, command)
         if success:
-            self.store.set_installed(package.name, not package.installed)
-        self._apply_filters()
+            self.store.set_installed(package.name, target_installed)
+            package.installed = target_installed
+            self.detail_page.set_package(package)
+            self._refresh_home()
+
+        self.status.setText(self.store.stats())
 
     def _status_text(self) -> str:
         if not self.store.pkg_manager.available():

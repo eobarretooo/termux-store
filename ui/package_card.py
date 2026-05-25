@@ -4,33 +4,26 @@ import hashlib
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-)
+from PyQt5.QtGui import QIcon, QMouseEvent
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
 
 from core.categories import category_label
 from core.package import Package
 
 
 ICON_COLORS = [
-    "#39d353",
-    "#58a6ff",
-    "#a371f7",
-    "#ff7b72",
-    "#f2cc60",
-    "#2fcdcd",
-    "#ff8f3c",
-    "#7ee787",
+    "#5aa469",
+    "#6aa6d9",
+    "#c08f4f",
+    "#9b8fd3",
+    "#d07468",
+    "#6cb6a9",
+    "#b98f55",
+    "#7aa65a",
 ]
 
-CARD_WIDTH = 252
-CARD_HEIGHT = 188
+CARD_WIDTH = 292
+CARD_HEIGHT = 112
 
 
 def icon_color(name: str) -> str:
@@ -39,7 +32,9 @@ def icon_color(name: str) -> str:
 
 
 class PackageCard(QFrame):
-    action_requested = pyqtSignal(object)
+    """Mint-style package tile: compact, clickable, no inline actions."""
+
+    activated = pyqtSignal(object)
 
     def __init__(self, package: Package) -> None:
         super().__init__()
@@ -47,79 +42,88 @@ class PackageCard(QFrame):
         self.setObjectName("packageCard")
         self.setFrameShape(QFrame.NoFrame)
         self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
+        self.setCursor(Qt.PointingHandCursor)
 
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(16, 14, 16, 14)
-        outer.setSpacing(9)
+        outer.setContentsMargins(10, 8, 10, 8)
+        outer.setSpacing(6)
 
         top = QHBoxLayout()
-        top.setSpacing(10)
+        top.setSpacing(9)
+        top.addWidget(self._build_icon(package), 0, Qt.AlignTop)
 
-        icon = self._build_icon(package)
-        top.addWidget(icon, 0, Qt.AlignTop)
-
-        top_text = QVBoxLayout()
-        top_text.setContentsMargins(0, 0, 0, 0)
-        top_text.setSpacing(4)
+        copy = QVBoxLayout()
+        copy.setContentsMargins(0, 0, 0, 0)
+        copy.setSpacing(4)
 
         title = QLabel(package.name)
         title.setObjectName("packageTitle")
         title.setWordWrap(False)
-        top_text.addWidget(title)
+        copy.addWidget(title)
 
-        category = category_label(package.category)
-        version = package.version or "available"
-        meta = QLabel(f"{category} / {version}")
-        meta.setObjectName("packageMeta")
-        top_text.addWidget(meta)
-        top_text.addStretch(1)
+        summary = QLabel(package.description or package.short_fallback)
+        summary.setObjectName("packageSummary")
+        summary.setWordWrap(False)
+        summary.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        copy.addWidget(summary)
 
-        top.addLayout(top_text, 1)
-        outer.addLayout(top)
+        top.addLayout(copy, 1)
 
-        description = QLabel(package.description or "No description available.")
-        description.setObjectName("packageDescription")
-        description.setWordWrap(True)
-        description.setMaximumHeight(40)
-        description.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        outer.addWidget(description)
+        installed = QLabel("OK")
+        installed.setObjectName("installedMark")
+        installed.setAlignment(Qt.AlignCenter)
+        installed.setFixedSize(24, 24)
+        installed.setVisible(package.installed)
+        top.addWidget(installed, 0, Qt.AlignTop)
+
+        outer.addLayout(top, 1)
 
         bottom = QHBoxLayout()
         bottom.setContentsMargins(0, 0, 0, 0)
-        bottom.setSpacing(8)
+        bottom.setSpacing(5)
 
-        if package.installed:
-            bottom.addWidget(self._pill("Installed", "installedPill"))
+        bottom.addWidget(self._meta("Termux"))
+        bottom.addWidget(self._dot())
+        bottom.addWidget(self._meta(category_label(package.category)))
+
         if package.gui:
-            bottom.addWidget(self._pill("GUI", "featurePill"))
+            bottom.addWidget(self._dot())
+            bottom.addWidget(self._meta("GUI"))
         if package.x11_required:
-            bottom.addWidget(self._pill("X11", "featurePill"))
+            bottom.addWidget(self._dot())
+            bottom.addWidget(self._meta("X11"))
 
         bottom.addStretch(1)
-
-        action = QPushButton("Remove" if package.installed else "Install")
-        action.setObjectName("removeButton" if package.installed else "installButton")
-        action.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        action.clicked.connect(lambda _checked=False: self.action_requested.emit(self.package))
-        bottom.addWidget(action)
         outer.addLayout(bottom)
 
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.LeftButton:
+            self.activated.emit(self.package)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
     @staticmethod
-    def _pill(text: str, object_name: str) -> QLabel:
+    def _meta(text: str) -> QLabel:
         label = QLabel(text)
-        label.setObjectName(object_name)
-        label.setAlignment(Qt.AlignCenter)
+        label.setObjectName("packageMeta")
+        return label
+
+    @staticmethod
+    def _dot() -> QLabel:
+        label = QLabel("/")
+        label.setObjectName("packageMetaDot")
         return label
 
     @staticmethod
     def _build_icon(package: Package) -> QLabel:
         label = QLabel()
         label.setObjectName("pkgIconLabel")
-        label.setFixedSize(58, 58)
+        label.setFixedSize(48, 48)
         label.setAlignment(Qt.AlignCenter)
 
         if package.icon_path and Path(package.icon_path).exists():
-            pixmap = QIcon(package.icon_path).pixmap(58, 58)
+            pixmap = QIcon(package.icon_path).pixmap(48, 48)
             if not pixmap.isNull():
                 label.setPixmap(pixmap)
                 return label
@@ -127,9 +131,9 @@ class PackageCard(QFrame):
         label.setText((package.name[0] if package.name else "?").upper())
         label.setStyleSheet(
             f"background: {icon_color(package.name)};"
-            "border-radius: 16px;"
-            "font-size: 24px;"
-            "font-weight: 900;"
+            "border-radius: 8px;"
+            "font-size: 21px;"
+            "font-weight: 700;"
             "color: white;"
         )
         return label

@@ -62,9 +62,14 @@ class Sidebar(QWidget):
     def _select(self, category_id: str) -> None:
         if category_id == self._active_id:
             return
+        self.set_active(category_id)
+        self.category_selected.emit(category_id)
+
+    def set_active(self, category_id: str) -> None:
+        if category_id not in self._buttons:
+            return
         self._active_id = category_id
         self._refresh_button_states()
-        self.category_selected.emit(category_id)
 
     def _refresh_button_states(self) -> None:
         for category_id, button in self._buttons.items():

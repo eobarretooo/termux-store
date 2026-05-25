@@ -8,7 +8,8 @@ packages easier to discover, install, and understand on Android with Termux X11.
 
 The internal flow follows the same broad architecture used by Linux Mint's
 Software Manager: a catalog layer builds package categories and installed state,
-then the UI renders category views, search results, cards, and detail dialogs.
+then the UI renders a home page, category views, search results, compact tiles,
+and an in-window package detail page.
 The implementation is rewritten for PyQt5 and Termux `pkg`.
 
 ## Requirements
@@ -62,7 +63,8 @@ termux-store/
     search_bar.py
     package_card.py
     package_grid.py
-    package_detail.py
+    category_tile.py
+    package_detail_page.py
     install_dialog.py
   data/
     curated_packages.md
@@ -78,7 +80,7 @@ termux-store/
 - Papirus icon resolution with fallback icon
 - Install/remove actions through `pkg`
 - Real-time install/remove output dialog
-- Package detail dialog
+- Package detail page
 
 ## License
 
