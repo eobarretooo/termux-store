@@ -15,6 +15,7 @@ class Package:
     long_description: str = ""
     install_command: str = ""
     launch_command: str = ""
+    icon_path: str = ""
     tips: list[str] = field(default_factory=list)
     screenshots: list[str] = field(default_factory=list)
     rating_great: int = 0
@@ -37,6 +38,7 @@ class Package:
         self.long_description = metadata.get("long_description", self.long_description)
         self.install_command = metadata.get("install_command", self.install_command)
         self.launch_command = metadata.get("launch_command", self.launch_command)
+        self.icon_path = metadata.get("icon_path", self.icon_path)
         self.tips = list(metadata.get("tips", self.tips))
         self.screenshots = list(metadata.get("screenshots", self.screenshots))
 

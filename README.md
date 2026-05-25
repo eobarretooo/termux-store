@@ -1,8 +1,7 @@
 # termux-store
 
-A native graphical package browser for Termux. It uses Termux `pkg` as the
-real package backend and enriches packages with community metadata from
-[termux-store-db](https://github.com/eobarretooo/termux-store-db).
+A native graphical app store for Termux X11. It uses Termux `pkg` as the
+package backend and a local curated catalog in `data/curated_packages.md`.
 
 The goal is not to replace Termux repositories. The goal is to make native
 packages easier to discover, install, and understand on Android with Termux X11.
@@ -13,13 +12,14 @@ packages easier to discover, install, and understand on Android with Termux X11.
 - Termux X11 for the graphical interface
 - Python 3.11+
 - PyQt5
+- Papirus Icon Theme
 
 ## Install in Termux
 
 ```bash
 pkg update && pkg upgrade
 pkg install python git x11-repo
-pkg install pyqt5
+pkg install pyqt5 papirus-icon-theme
 ```
 
 Do not install PyQt5 with `pip` on Termux. Use `pkg install pyqt5` instead,
@@ -37,7 +37,7 @@ DISPLAY=:0 python main.py
 ```
 
 Outside Termux, the app can still open but package operations return empty
-results because `pkg` is not available.
+results because `pkg` is not available. The curated catalog is still loaded.
 
 ## Project layout
 
@@ -48,14 +48,18 @@ termux-store/
     package.py
     pkg_manager.py
     db_sync.py
+    icon_resolver.py
     categories.py
   ui/
     main_window.py
     sidebar.py
     search_bar.py
+    package_card.py
     package_grid.py
     package_detail.py
     install_dialog.py
+  data/
+    curated_packages.md
   cache/
   config/
   tests/
@@ -63,14 +67,12 @@ termux-store/
 
 ## Roadmap
 
-- Package listing from `pkg list-all`
+- Curated app catalog from `data/curated_packages.md`
 - Search and category filtering
-- Metadata sync from `termux-store-db`
+- Papirus icon resolution with fallback icon
 - Install/remove actions through `pkg`
+- Real-time install/remove output dialog
 - Package detail dialog
-- Screenshot viewer
-- Rating submission flow
-- Robust background loading and terminal output display
 
 ## License
 

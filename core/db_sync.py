@@ -1,70 +1,109 @@
 from __future__ import annotations
 
-import json
-from collections.abc import Callable
+import re
 from pathlib import Path
 from typing import Any
-from urllib.request import urlopen
+
+from core.icon_resolver import get_icon
+from core.package import Package
 
 
-DB_BASE_URL = "https://raw.githubusercontent.com/eobarretooo/termux-store-db/main"
-DB_INDEX_URL = f"{DB_BASE_URL}/packages/index.json"
-DB_PACKAGE_URL = f"{DB_BASE_URL}/packages/{{name}}.json"
-DEFAULT_CACHE_DIR = Path(__file__).resolve().parents[1] / "cache"
-
-
-HttpGet = Callable[[str, int], str]
-
-
-def fetch_text(url: str, timeout: int = 10) -> str:
-    with urlopen(url, timeout=timeout) as response:
-        return response.read().decode("utf-8")
+DEFAULT_DATA_FILE = Path(__file__).resolve().parents[1] / "data" / "curated_packages.md"
 
 
 class DbSync:
-    def __init__(
-        self,
-        cache_dir: Path | str = DEFAULT_CACHE_DIR,
-        http_get: HttpGet = fetch_text,
-    ) -> None:
-        self.cache_dir = Path(cache_dir)
-        self.metadata_dir = self.cache_dir / "metadata"
-        self.http_get = http_get
-        self.metadata_dir.mkdir(parents=True, exist_ok=True)
+    """Local curated package catalog.
+
+    The original project idea used a remote metadata database. The current app
+    is intentionally offline-friendly: it parses data/curated_packages.md and
+    merges that metadata with Termux pkg output in the UI layer.
+    """
+
+    def __init__(self, data_file: Path | str = DEFAULT_DATA_FILE, **_: object) -> None:
+        self.data_file = Path(data_file)
+        self._index: dict[str, dict[str, Any]] | None = None
 
     def fetch_index(self) -> list[dict[str, Any]]:
-        cache_path = self.cache_dir / "index.json"
-        try:
-            text = self.http_get(DB_INDEX_URL, 10)
-            cache_path.write_text(text, encoding="utf-8")
-            data = json.loads(text)
-            return data if isinstance(data, list) else []
-        except Exception:
-            return self._read_json(cache_path, fallback=[])
+        return list(self.index_by_name().values())
 
     def fetch_package(self, name: str) -> dict[str, Any]:
-        cache_path = self.metadata_dir / f"{name}.json"
-        try:
-            text = self.http_get(DB_PACKAGE_URL.format(name=name), 10)
-            cache_path.write_text(text, encoding="utf-8")
-            data = json.loads(text)
-            return data if isinstance(data, dict) else {}
-        except Exception:
-            return self._read_json(cache_path, fallback={})
+        return self.index_by_name().get(name, {})
 
     def index_by_name(self) -> dict[str, dict[str, Any]]:
-        return {
-            item["name"]: item
-            for item in self.fetch_index()
-            if isinstance(item, dict) and isinstance(item.get("name"), str)
-        }
+        if self._index is None:
+            self._index = {
+                item["name"]: item
+                for item in self._parse_curated_file()
+                if isinstance(item.get("name"), str)
+            }
+        return self._index
+
+    def curated_packages(self) -> list[Package]:
+        packages: list[Package] = []
+        for metadata in self.fetch_index():
+            package = Package(name=metadata["name"])
+            package.apply_metadata(metadata)
+            packages.append(package)
+        return packages
+
+    def _parse_curated_file(self) -> list[dict[str, Any]]:
+        if not self.data_file.exists():
+            return []
+
+        category = "utilities"
+        items: list[dict[str, Any]] = []
+
+        for raw_line in self.data_file.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+
+            if line.startswith("## "):
+                category = self._category_from_heading(line)
+                continue
+
+            if not line.startswith("|") or "---" in line or "Pacote" in line:
+                continue
+
+            columns = [part.strip() for part in line.strip("|").split("|")]
+            if len(columns) < 4:
+                continue
+
+            name, description, gui, x11 = columns[:4]
+            if not name or name.lower() == "pacote":
+                continue
+
+            items.append(
+                {
+                    "name": name,
+                    "category": category,
+                    "short_description": description,
+                    "long_description": description,
+                    "gui": self._truthy(gui),
+                    "x11_required": self._truthy(x11),
+                    "install_command": f"pkg install {name}",
+                    "launch_command": self._launch_command(name, self._truthy(x11)),
+                    "icon_path": get_icon(name),
+                    "tips": [],
+                    "screenshots": [],
+                    "community_rating": {
+                        "works_great": 0,
+                        "unstable": 0,
+                        "broken": 0,
+                    },
+                }
+            )
+
+        return items
 
     @staticmethod
-    def _read_json(path: Path, fallback: Any) -> Any:
-        if not path.exists():
-            return fallback
+    def _category_from_heading(line: str) -> str:
+        match = re.search(r"\(([^)]+)\)", line)
+        return match.group(1).strip().lower() if match else "utilities"
 
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            return fallback
+    @staticmethod
+    def _truthy(value: str) -> bool:
+        normalized = value.strip().lower()
+        return normalized in {"yes", "sim", "true", "1", "gui", "x11", "check"}
+
+    @staticmethod
+    def _launch_command(name: str, x11_required: bool) -> str:
+        return f"DISPLAY=:0 {name}" if x11_required else name

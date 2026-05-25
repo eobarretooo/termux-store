@@ -17,6 +17,7 @@ _ICONS: dict[str, str] = {
     "graphics": "&  ",
     "productivity": ".  ",
     "games": "+  ",
+    "desktop": "WM ",
     "fonts": "Aa ",
 }
 

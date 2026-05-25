@@ -1,19 +1,42 @@
 from core.db_sync import DbSync
 
 
-def test_fetch_index_writes_cache(tmp_path):
-    sync = DbSync(cache_dir=tmp_path, http_get=lambda url, timeout: '[{"name": "vim"}]')
+def test_fetch_index_parses_curated_markdown(tmp_path):
+    data_file = tmp_path / "curated_packages.md"
+    data_file.write_text(
+        """
+## Development (development)
 
-    assert sync.fetch_index() == [{"name": "vim"}]
-    assert (tmp_path / "index.json").exists()
+| Pacote | Descricao | GUI | X11 |
+|---|---|---|---|
+| geany | Lightweight IDE | yes | yes |
+| vim | Terminal editor | no | no |
+""",
+        encoding="utf-8",
+    )
+
+    sync = DbSync(data_file=data_file)
+
+    assert sync.index_by_name()["geany"]["category"] == "development"
+    assert sync.index_by_name()["geany"]["gui"] is True
+    assert sync.index_by_name()["vim"]["x11_required"] is False
 
 
-def test_fetch_index_falls_back_to_cache(tmp_path):
-    (tmp_path / "index.json").write_text('[{"name": "cached"}]', encoding="utf-8")
+def test_curated_packages_returns_package_objects(tmp_path):
+    data_file = tmp_path / "curated_packages.md"
+    data_file.write_text(
+        """
+## Games (games)
 
-    def failing_get(url, timeout):
-        raise RuntimeError("offline")
+| Pacote | Descricao | GUI | X11 |
+|---|---|---|---|
+| 0ad | Strategy game | yes | yes |
+""",
+        encoding="utf-8",
+    )
 
-    sync = DbSync(cache_dir=tmp_path, http_get=failing_get)
+    packages = DbSync(data_file=data_file).curated_packages()
 
-    assert sync.fetch_index() == [{"name": "cached"}]
+    assert len(packages) == 1
+    assert packages[0].name == "0ad"
+    assert packages[0].category == "games"

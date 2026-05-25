@@ -19,7 +19,7 @@ from core.categories import infer_category
 from core.db_sync import DbSync
 from core.package import Package
 from core.pkg_manager import PkgManager
-from ui.install_dialog import show_command_result
+from ui.install_dialog import run_pkg_command
 from ui.package_detail import PackageDetailDialog
 from ui.package_grid import PackageGrid
 from ui.search_bar import SearchBar
@@ -173,13 +173,17 @@ class MainWindow(QMainWindow):
 
     def _load_packages(self) -> None:
         self.status.setText("Loading packages...")
-        packages = self.pkg_manager.list_all()
-        metadata = self.db_sync.index_by_name()
+        pkg_map = {package.name: package for package in self.pkg_manager.list_all()}
+        packages = self.db_sync.curated_packages()
 
         for package in packages:
-            if package.name in metadata:
-                package.apply_metadata(metadata[package.name])
-            else:
+            pkg_info = pkg_map.get(package.name)
+            if pkg_info is not None:
+                package.version = pkg_info.version
+                package.installed = pkg_info.installed
+                if not package.description:
+                    package.description = pkg_info.description
+            elif not package.category:
                 package.category = infer_category(package.name)
 
         self.packages = packages
@@ -225,17 +229,15 @@ class MainWindow(QMainWindow):
 
     def _run_package_action(self, package: Package) -> None:
         if package.installed:
-            success, output = self.pkg_manager.remove(package.name)
+            command = [self.pkg_manager.pkg_executable, "uninstall", "-y", package.name]
             action = "Remove"
-            if success:
-                package.installed = False
         else:
-            success, output = self.pkg_manager.install(package.name)
+            command = [self.pkg_manager.pkg_executable, "install", "-y", package.name]
             action = "Install"
-            if success:
-                package.installed = True
 
-        show_command_result(self, success, action, output)
+        success = run_pkg_command(self, action, command)
+        if success:
+            package.installed = not package.installed
         self._apply_filters()
 
     def _status_text(self) -> str:

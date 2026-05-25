@@ -12,6 +12,7 @@ CATEGORIES = [
     ("graphics", "Graphics"),
     ("productivity", "Productivity"),
     ("games", "Games"),
+    ("desktop", "Desktop"),
     ("fonts", "Fonts"),
 ]
 
@@ -151,6 +152,24 @@ CATEGORY_KEYWORDS = {
         "font",
         "nerd-font",
         "ttf",
+    },
+    "desktop": {
+        "awesome",
+        "bspwm",
+        "desktop",
+        "dmenu",
+        "dunst",
+        "dwm",
+        "fluxbox",
+        "i3",
+        "icewm",
+        "jwm",
+        "openbox",
+        "picom",
+        "rofi",
+        "tint2",
+        "wmaker",
+        "xwallpaper",
     },
 }
 
